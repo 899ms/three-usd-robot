@@ -158,10 +158,23 @@ function finishDataTexture(texture: THREE.DataTexture, colorSpace: string): THRE
   return texture;
 }
 
-/** 1×1 float environment of the dome's (linear) color — a uniform sky. */
+/**
+ * Small float equirect filled with the dome's (linear) color — a uniform sky.
+ * Deliberately not 1×1: three's PMREM prefilter sizes its cubemap from the
+ * equirect width (width / 4), and a degenerate size breaks the shader of
+ * every environment-lit material (`useProgram: program not valid`).
+ */
 function colorTexture(color: [number, number, number]): THREE.Texture {
-  const data = new Float32Array([color[0], color[1], color[2], 1]);
-  const texture = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat, THREE.FloatType);
+  const width = 64;
+  const height = 32;
+  const data = new Float32Array(width * height * 4);
+  for (let i = 0; i < width * height; i++) {
+    data[i * 4] = color[0];
+    data[i * 4 + 1] = color[1];
+    data[i * 4 + 2] = color[2];
+    data[i * 4 + 3] = 1;
+  }
+  const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat, THREE.FloatType);
   return finishDataTexture(texture, THREE.LinearSRGBColorSpace);
 }
 

@@ -119,6 +119,7 @@ function frame(object: THREE.Object3D) {
 
   sun.position.copy(center).add(new THREE.Vector3(1, 1.6, 0.7).setLength(radius * 3));
   sun.target.position.copy(center);
+  sun.shadow.normalBias = 0.02 * Math.max(radius, 1); // scale acne bias with the scene
   const extent = radius * 1.5;
   sun.shadow.camera.left = -extent;
   sun.shadow.camera.right = extent;
@@ -377,12 +378,7 @@ async function load(url: string) {
   try {
     // Isaac assets are variant-driven and multi-layer; the loader composes them.
     // `loadSceneGeometry` also draws scenery that belongs to no link.
-    const next = await new ThreeUsdRobotLoader({
-      loadSceneGeometry: true,
-      // Omniverse authors photometric intensities (thousands of nits); scale
-      // them into this renderer's exposure-1 range. See docs/lighting.md.
-      ...(url.startsWith(ISAAC) ? { lightIntensityScale: 0.001 } : {}),
-    }).loadAsync(url);
+    const next = await new ThreeUsdRobotLoader({ loadSceneGeometry: true }).loadAsync(url);
     if (robot) {
       scene.remove(robot);
       dispose(robot);
@@ -391,6 +387,18 @@ async function load(url: string) {
     scene.add(next);
     next.showJointAxes = true;
     frame(next);
+
+    // Omniverse-style stages author photometric intensities (hundreds to tens
+    // of thousands — Isaac robots and the factory sample alike); scale them
+    // into this renderer's exposure-1 range. Unitless stages (intensities
+    // around 1) pass through. See docs/lighting.md on calibration.
+    const authored = Math.max(
+      0,
+      ...next.lights.map((light) => light.intensity),
+      ...next.domeLights.map((dome) => dome.intensity),
+    );
+    const lightScale = authored > 100 ? 0.001 : 1;
+    for (const light of next.lights) light.intensity *= lightScale;
 
     // Stages that bring a lighting setup (a dome, or several lights) render
     // with it; a single stray light — Franka ships one SphereLight — keeps the
@@ -433,6 +441,7 @@ async function load(url: string) {
       setStatus(`${statusText} — fetching dome environment…`);
       await applyUsdEnvironment(next, scene, {
         background: true,
+        intensityScale: lightScale,
         onWarn: (m) => console.warn(`[three-usd-robot] ${m}`),
       });
       // The user may have switched assets while the HDRI streamed in.

@@ -154,7 +154,9 @@ describe("applyUsdEnvironment (M26)", () => {
 
     expect(warnings.some((m) => m.includes("missing.hdr"))).toBe(true);
     const texture = env!.texture as THREE.DataTexture;
-    expect(texture.image.width).toBe(1);
+    // A real (non-1×1) equirect: PMREM sizes its cubemap from width / 4.
+    expect(texture.image.width).toBe(64);
+    expect(texture.image.height).toBe(32);
     const data = texture.image.data as unknown as Float32Array;
     expect(data[0]).toBeCloseTo(1, 6);
     expect(data[1]).toBeCloseTo(0.5, 6);

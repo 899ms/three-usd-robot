@@ -13,7 +13,8 @@
       "three-usd-robot": ["../../src/index.ts"],
       "three-usd-robot/core": ["../../src/core.ts"],
       "three-usd-robot/helpers": ["../../src/helpers.ts"],
-      "three-usd-robot/extras": ["../../src/extras.ts"]
+      "three-usd-robot/extras": ["../../src/extras.ts"],
+      "three-usd-robot/rendering": ["../../src/rendering.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

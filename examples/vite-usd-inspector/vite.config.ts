@@ -8,6 +8,9 @@ const src = (p: string) => resolve(root, "../../src", p);
 
 export default defineConfig({
   resolve: {
+    // The aliased library source resolves `three` from the repo root while the
+    // example resolves its own copy — collapse them to one instance.
+    dedupe: ["three"],
     alias: [
       { find: "three-usd-robot/extras", replacement: src("extras.ts") },
       { find: "three-usd-robot/helpers", replacement: src("helpers.ts") },
