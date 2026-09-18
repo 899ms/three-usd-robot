@@ -17,10 +17,10 @@ import type { RobotDescription } from "../robot/RobotDescription.js";
 import {
   type MaterialSubset,
   getMaterialSubsets,
+  isInvisible,
   isNonVisualPurpose,
   isRenderableGprim,
 } from "../schemas/usdGeom.js";
-import { COLLISION_API } from "../schemas/usdPhysics.js";
 import type { Prim } from "../usd/Prim.js";
 import type { Stage } from "../usd/Stage.js";
 import type { MdlModuleProvider } from "../usd/mdl/parseMdl.js";
@@ -980,7 +980,9 @@ export function bindRobotMeshes(
  * transform), so grouped scenery — a pallet and its cartons, a fence and its
  * wires — stays one movable subtree. World placements are unchanged, and the
  * loader's up-axis and unit normalization still applies at the robot root.
- * Collision-only and guide/proxy prims are skipped.
+ * Collision-only (guide/proxy purpose) and invisible prims are skipped; a
+ * gprim that merely carries `PhysicsCollisionAPI` still renders, like the
+ * robot extractor's visual/collision split.
  */
 export function bindSceneMeshes(
   stage: Stage,
@@ -1033,7 +1035,11 @@ export function bindSceneMeshes(
   let attached = 0;
   for (const prim of stage.Traverse()) {
     if (!isRenderableGprim(prim) || owned.has(prim.GetPath())) continue;
-    if (prim.HasAPI(COLLISION_API) || isNonVisualPurpose(prim)) continue;
+    // A gprim carrying PhysicsCollisionAPI with a visual purpose renders AND
+    // collides — standard Omniverse authoring (Isaac rooms apply it straight
+    // to their render meshes). Only guide/proxy purposes are collision-only,
+    // matching the robot extractor; authored invisibility is honored too.
+    if (isNonVisualPurpose(prim) || isInvisible(prim)) continue;
     // Skip gprims under a link (already bound relative to their link).
     if ([...owned].some((path) => prim.GetPath().startsWith(`${path}/`))) continue;
 

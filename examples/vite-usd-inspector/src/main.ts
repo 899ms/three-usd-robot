@@ -486,6 +486,18 @@ window.addEventListener("resize", () => {
   composer?.setSize(window.innerWidth, window.innerHeight);
 });
 
+// Viewer internals for automated tooling (screenshot scripts, e2e checks).
+Object.assign(window as unknown as Record<string, unknown>, {
+  __usdViewer: {
+    scene,
+    camera,
+    controls,
+    get robot() {
+      return robot;
+    },
+  },
+});
+
 renderer.setAnimationLoop(() => {
   tick?.();
   controls.update();

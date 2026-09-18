@@ -169,6 +169,50 @@ describe("pure static scenes (no articulation)", () => {
     expect(desc.name).toBe("Factory");
   });
 
+  it("renders meshes that are their own colliders; purpose and visibility still gate", async () => {
+    // Omniverse-style authoring (stock Isaac rooms): PhysicsCollisionAPI sits
+    // directly on the render meshes, collision-only shapes use guide purpose.
+    const OMNI_ROOM = `#usda 1.0
+(
+    defaultPrim = "Room"
+    metersPerUnit = 1.0
+    upAxis = "Z"
+)
+
+def Xform "Room"
+{
+    def Mesh "wall" (
+        prepend apiSchemas = ["PhysicsCollisionAPI", "PhysicsMeshCollisionAPI"]
+    )
+    {
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]
+    }
+
+    def Mesh "collision_proxy" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        uniform token purpose = "guide"
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]
+    }
+
+    def Mesh "hidden_plane"
+    {
+        token visibility = "invisible"
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]
+    }
+}
+`;
+    const robot = await new ThreeUsdRobotLoader().parse(OMNI_ROOM);
+    expect(meshes(robot).map((m) => m.name)).toEqual(["wall"]);
+  });
+
   it("loads a stage with no gprims at all without crashing", async () => {
     const robot = await new ThreeUsdRobotLoader().parse(EMPTY);
     expect(meshes(robot)).toHaveLength(0);

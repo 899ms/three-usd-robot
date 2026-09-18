@@ -70,6 +70,11 @@ export function isNonVisualPurpose(prim: Prim): boolean {
   return p === "guide" || p === "proxy";
 }
 
+/** True when the prim itself authors `visibility = "invisible"`. */
+export function isInvisible(prim: Prim): boolean {
+  return prim.GetAttribute("visibility").Get() === "invisible";
+}
+
 /** A face subset of a mesh that carries its own material binding. */
 export type MaterialSubset = {
   /** The `GeomSubset` prim — resolve its `material:binding` for the material. */

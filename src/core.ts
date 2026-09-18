@@ -162,6 +162,7 @@ export {
   gatherGprimDescendants,
   gatherMeshDescendants,
   isBasisCurves,
+  isInvisible,
   isMesh,
   isPoints,
   isRenderableGprim,

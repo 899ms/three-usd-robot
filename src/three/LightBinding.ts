@@ -14,7 +14,7 @@
  */
 
 import * as THREE from "three";
-import { isNonVisualPurpose } from "../schemas/usdGeom.js";
+import { isInvisible, isNonVisualPurpose } from "../schemas/usdGeom.js";
 import {
   type LightDescription,
   getLightKind,
@@ -108,8 +108,7 @@ export function bindLights(
       continue;
     }
     if (!getLightKind(prim)) continue;
-    if (prim.GetAttribute("visibility").Get() === "invisible") continue;
-    if (isNonVisualPurpose(prim)) continue;
+    if (isInvisible(prim) || isNonVisualPurpose(prim)) continue;
 
     const desc = readLightDescription(prim);
     if (!desc) continue;

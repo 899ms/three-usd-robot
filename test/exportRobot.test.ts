@@ -366,6 +366,7 @@ def Xform "cell"
             prepend apiSchemas = ["PhysicsCollisionAPI"]
         )
         {
+            uniform token purpose = "guide"
             int[] faceVertexCounts = [3]
             int[] faceVertexIndices = [0, 1, 2]
             point3f[] points = [(0, 0, 0), (4, 0, 0), (0, 4, 0)]

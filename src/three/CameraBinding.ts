@@ -11,7 +11,7 @@
  */
 
 import * as THREE from "three";
-import { isNonVisualPurpose } from "../schemas/usdGeom.js";
+import { isInvisible, isNonVisualPurpose } from "../schemas/usdGeom.js";
 import {
   type CameraDescription,
   isCamera,
@@ -47,8 +47,7 @@ export function bindCameras(
 
   for (const prim of stage.Traverse()) {
     if (!isCamera(prim)) continue;
-    if (prim.GetAttribute("visibility").Get() === "invisible") continue;
-    if (isNonVisualPurpose(prim)) continue;
+    if (isInvisible(prim) || isNonVisualPurpose(prim)) continue;
     const desc = readCameraDescription(prim);
     if (!desc) continue;
 
