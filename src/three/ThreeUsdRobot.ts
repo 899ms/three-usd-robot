@@ -162,8 +162,11 @@ export class ThreeUsdRobot extends THREE.Object3D {
    */
   assetContext?: { resolver: AssetResolver; baseUrl: string };
   /**
-   * The loader's `lightIntensityScale` (M26): `applyUsdEnvironment` defaults
-   * to it so the dome environment scales consistently with the bound lights.
+   * The intensity multiplier resolved at load — the loader's
+   * `lightIntensityScale`, with `"auto"` decided against the stage's authored
+   * emissions (`0.001` for photometric Omniverse-style stages, else `1`).
+   * `applyUsdEnvironment` defaults to it so the dome environment scales
+   * consistently with the bound lights (M26).
    */
   lightIntensityScale?: number;
 

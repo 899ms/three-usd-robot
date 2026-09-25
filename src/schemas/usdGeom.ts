@@ -70,9 +70,16 @@ export function isNonVisualPurpose(prim: Prim): boolean {
   return p === "guide" || p === "proxy";
 }
 
-/** True when the prim itself authors `visibility = "invisible"`. */
+/**
+ * True when the prim — or any ancestor — authors `visibility = "invisible"`
+ * (USD computed visibility: invisibility inherits down and cannot be
+ * overridden by a descendant).
+ */
 export function isInvisible(prim: Prim): boolean {
-  return prim.GetAttribute("visibility").Get() === "invisible";
+  for (let p: Prim | null = prim; p && !p.IsPseudoRoot(); p = p.GetParent()) {
+    if (p.GetAttribute("visibility").Get() === "invisible") return true;
+  }
+  return false;
 }
 
 /** A face subset of a mesh that carries its own material binding. */

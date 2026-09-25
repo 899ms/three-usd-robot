@@ -15,6 +15,7 @@ exported back to `.usda` / `.usdz` in the browser.
 
 ![A franka panda loaded in the browser](assets/franka.png)
 ![A robot cell loaded in the browser](assets/threejs.png)
+![Isaac Sim's Simple Room lit by its own UsdLux lights and DomeLight HDRI](assets/simple_room.png)
 
 ## Features
 

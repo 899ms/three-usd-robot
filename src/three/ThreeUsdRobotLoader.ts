@@ -45,12 +45,14 @@ export type ThreeUsdRobotLoaderOptions = {
    */
   loadCameras?: boolean;
   /**
-   * Multiplies every light's authored emission (`intensity × 2^exposure`,
-   * default `1`). Stages authored in Omniverse/RTX photometric units
-   * (intensities in the thousands) typically want `0.001` to land in
-   * Three.js's exposure-1 range; see docs/lighting.md.
+   * How authored light emissions (`intensity × 2^exposure`) map to Three.js
+   * intensities. `"auto"` (the default) detects Omniverse/RTX photometric
+   * authoring — any light or dome above 100 — and scales the whole stage by
+   * `0.001`, leaving unitless stages untouched; a number multiplies
+   * emissions verbatim. The resolved multiplier lands on
+   * {@link ThreeUsdRobot.lightIntensityScale}. See docs/lighting.md.
    */
-  lightIntensityScale?: number;
+  lightIntensityScale?: number | "auto";
   /**
    * Flag meshes `castShadow` / `receiveShadow` and configure light shadows per
    * `ShadowAPI` (M25, default `true`). Costs nothing until a renderer enables
@@ -201,9 +203,6 @@ export class ThreeUsdRobotLoader {
     // For deferred asset fetches (M26): dome HDRIs load through the same
     // resolver, so relative CDN paths and `.usdz` entries keep working.
     robot3d.assetContext = { resolver, baseUrl };
-    if (this.options.lightIntensityScale !== undefined) {
-      robot3d.lightIntensityScale = this.options.lightIntensityScale;
-    }
 
     const loadVisuals = this.options.loadVisuals ?? true;
     const loadCollisions = this.options.loadCollisions ?? false;
@@ -257,14 +256,15 @@ export class ThreeUsdRobotLoader {
       // After mesh binding: lights anchor to the mirrored scenery groups and
       // shadow cameras fit the bound geometry (M25).
       const bound = bindLights(stage, robot3d, {
-        ...(this.options.lightIntensityScale !== undefined
-          ? { lightIntensityScale: this.options.lightIntensityScale }
-          : {}),
+        lightIntensityScale: this.options.lightIntensityScale ?? "auto",
         ...(shadows ? { shadows } : {}),
         ...(onWarn ? { onWarn } : {}),
       });
       robot3d.lights = bound.lights;
       robot3d.domeLights = bound.domes;
+      // The resolved multiplier ("auto" → 0.001 or 1) — applyUsdEnvironment
+      // defaults to it so the dome environment stays in balance (M26).
+      robot3d.lightIntensityScale = bound.appliedIntensityScale;
     }
     if (this.options.loadCameras ?? true) {
       robot3d.cameras = bindCameras(stage, robot3d, {

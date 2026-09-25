@@ -10,7 +10,7 @@
  * import { applyRenderDefaults, applyUsdEnvironment } from "three-usd-robot/rendering";
  *
  * applyRenderDefaults(renderer); // ACES tone mapping + soft shadow maps
- * const robot = await new ThreeUsdRobotLoader({ lightIntensityScale: 0.001 }).loadAsync(url);
+ * const robot = await new ThreeUsdRobotLoader().loadAsync(url);
  * scene.add(robot);
  * await applyUsdEnvironment(robot, scene, { background: true }); // DomeLight → IBL
  * ```

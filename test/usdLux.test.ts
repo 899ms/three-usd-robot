@@ -89,6 +89,15 @@ def Xform "Room"
     {
         uniform token purpose = "guide"
     }
+
+    def Xform "off"
+    {
+        token visibility = "invisible"
+
+        def SphereLight "groupedHidden"
+        {
+        }
+    }
 }
 `;
 
@@ -196,7 +205,7 @@ function lightByName(robot: { lights: THREE.Light[] }, name: string): THREE.Ligh
 
 describe("UsdLux lights (M25)", () => {
   it("binds each supported light type to its Three.js counterpart", async () => {
-    const robot = await new ThreeUsdRobotLoader().parse(SCENE);
+    const robot = await new ThreeUsdRobotLoader({ lightIntensityScale: 1 }).parse(SCENE);
 
     expect(robot.lights.map((l) => l.name).sort()).toEqual([
       "bulb",
@@ -248,7 +257,7 @@ describe("UsdLux lights (M25)", () => {
   });
 
   it("sizes area lights in world meters (prim scale × metersPerUnit)", async () => {
-    const robot = await new ThreeUsdRobotLoader().parse(SCENE);
+    const robot = await new ThreeUsdRobotLoader({ lightIntensityScale: 1 }).parse(SCENE);
 
     // 500 × own scale 0.01 × metersPerUnit 0.01 — Three.js ignores ancestor
     // scale for RectAreaLight sizes, so the binder pre-multiplies it.
@@ -291,10 +300,31 @@ describe("UsdLux lights (M25)", () => {
     expect(warnings.filter((m) => m.includes("CylinderLight"))).toHaveLength(1);
   });
 
-  it("skips invisible and guide-purpose lights", async () => {
+  it("skips invisible (own or inherited) and guide-purpose lights", async () => {
     const robot = await new ThreeUsdRobotLoader().parse(SCENE);
     expect(robot.lights.some((l) => l.name === "hidden")).toBe(false);
     expect(robot.lights.some((l) => l.name === "guides")).toBe(false);
+    // Invisibility inherits: the light's parent Xform is invisible.
+    expect(robot.lights.some((l) => l.name === "groupedHidden")).toBe(false);
+  });
+
+  it('calibrates photometric stages automatically (lightIntensityScale: "auto")', async () => {
+    // SCENE authors Omniverse-scale emissions (thousands) → whole stage ×0.001.
+    const photometric = await new ThreeUsdRobotLoader().parse(SCENE);
+    expect(photometric.lightIntensityScale).toBe(0.001);
+    expect((lightByName(photometric, "sun") as THREE.DirectionalLight).intensity).toBeCloseTo(
+      0.4,
+      6,
+    );
+
+    // LEGACY authors unitless emissions (≤ 100) → untouched.
+    const unitless = await new ThreeUsdRobotLoader().parse(LEGACY);
+    expect(unitless.lightIntensityScale).toBe(1);
+    expect((lightByName(unitless, "old") as THREE.PointLight).intensity).toBeCloseTo(7, 6);
+
+    // Explicit "auto" matches the default.
+    const explicit = await new ThreeUsdRobotLoader({ lightIntensityScale: "auto" }).parse(SCENE);
+    expect(explicit.lightIntensityScale).toBe(0.001);
   });
 
   it("falls back to legacy un-namespaced input names", async () => {
@@ -304,7 +334,7 @@ describe("UsdLux lights (M25)", () => {
   });
 
   it("applies schema fallbacks and ShadowAPI gating", async () => {
-    const robot = await new ThreeUsdRobotLoader().parse(DEFAULTS);
+    const robot = await new ThreeUsdRobotLoader({ lightIntensityScale: 1 }).parse(DEFAULTS);
 
     // DistantLight's schema fallback intensity is 50000.
     const sun = lightByName(robot, "sun") as THREE.DirectionalLight;

@@ -81,16 +81,14 @@ describe("applyUsdEnvironment (M26)", () => {
     expect(scene.environmentRotation.z).toBeCloseTo(0, 6);
   });
 
-  it("sets the background too when asked", async () => {
-    const robot = await loadWithHdr();
+  it("sets the background too, scaled by the auto-calibrated loader multiplier", async () => {
+    const robot = await loadWithHdr(); // dome intensity 1000 → "auto" resolves 0.001
+    expect(robot.lightIntensityScale).toBe(0.001);
     const scene = new THREE.Scene();
-    const env = await applyUsdEnvironment(robot, scene, {
-      background: true,
-      intensityScale: 0.001,
-    });
+    const env = await applyUsdEnvironment(robot, scene, { background: true });
     expect(scene.background).toBe(env!.texture);
     expect(scene.backgroundIntensity).toBeCloseTo(1, 6);
-    expect(scene.environmentIntensity).toBeCloseTo(1, 6); // option overrides the loader default (1)
+    expect(scene.environmentIntensity).toBeCloseTo(1, 6);
   });
 
   it("loads a dome texture packed inside a .usdz", async () => {

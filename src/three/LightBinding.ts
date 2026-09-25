@@ -29,13 +29,14 @@ import { attachAtPrim, collectAnchors, worldScaleOf } from "./stageAnchors.js";
 
 export type BindLightsOptions = {
   /**
-   * Multiplies every light's effective emission (`intensity × 2^exposure`).
-   * Default `1` — the authored UsdLux value passes through unchanged. Stages
-   * authored in Omniverse/RTX photometric units (intensities in the thousands)
-   * typically want `0.001` to land in Three.js's exposure-1 range; see
-   * docs/lighting.md.
+   * How authored emissions (`intensity × 2^exposure`) map to Three.js
+   * intensities. A number multiplies them verbatim. `"auto"` (the default)
+   * detects photometric authoring per stage — Omniverse/RTX assets carry
+   * values in the hundreds to tens of thousands — and scales every light and
+   * dome by `0.001` when any emission exceeds `100`, leaving unitless stages
+   * untouched. See docs/lighting.md.
    */
-  lightIntensityScale?: number;
+  lightIntensityScale?: number | "auto";
   /**
    * Configure shadow casting: `castShadow` per the light's ShadowAPI, with the
    * shadow camera fitted to the scene bounds. Default `false` here — the
@@ -56,7 +57,26 @@ export type BoundLights = {
   lights: THREE.Light[];
   /** DomeLights parsed but not realized — apply via `applyUsdEnvironment` (M26). */
   domes: LightDescription[];
+  /**
+   * The intensity multiplier actually applied — `"auto"` resolved against the
+   * stage's authored emissions (`0.001` or `1`), or the number passed in.
+   * Feed it to `applyUsdEnvironment` so the dome environment matches; the
+   * loader stores it on {@link ThreeUsdRobot.lightIntensityScale}.
+   */
+  appliedIntensityScale: number;
 };
+
+/** Emissions above this read as photometric (nits/lux-style) authoring. */
+const AUTO_PHOTOMETRIC_THRESHOLD = 100;
+/** The stage-wide multiplier `"auto"` applies to photometric authoring. */
+const AUTO_PHOTOMETRIC_SCALE = 0.001;
+
+/** Resolve `"auto"` against everything the stage authors (lights and domes). */
+function resolveIntensityScale(option: number | "auto", descriptions: LightDescription[]): number {
+  if (option !== "auto") return option;
+  const max = descriptions.reduce((m, d) => Math.max(m, d.intensity), 0);
+  return max > AUTO_PHOTOMETRIC_THRESHOLD ? AUTO_PHOTOMETRIC_SCALE : 1;
+}
 
 /**
  * Traverse the stage and bind every supported UsdLux light. Call after mesh
@@ -69,7 +89,6 @@ export function bindLights(
   robot3d: ThreeUsdRobot,
   options: BindLightsOptions = {},
 ): BoundLights {
-  const intensityScale = options.lightIntensityScale ?? 1;
   const shadows = options.shadows ?? false;
   const lights: THREE.Light[] = [];
   const domes: LightDescription[] = [];
@@ -99,6 +118,9 @@ export function bindLights(
     return metrics;
   };
 
+  // First pass: gather every renderable light description, so `"auto"` can
+  // judge the stage's authoring style before any intensity is committed.
+  const gathered: { prim: Prim; desc: LightDescription }[] = [];
   for (const prim of stage.Traverse()) {
     if (isUnsupportedLight(prim)) {
       warnOnce(
@@ -109,10 +131,16 @@ export function bindLights(
     }
     if (!getLightKind(prim)) continue;
     if (isInvisible(prim) || isNonVisualPurpose(prim)) continue;
-
     const desc = readLightDescription(prim);
-    if (!desc) continue;
+    if (desc) gathered.push({ prim, desc });
+  }
 
+  const intensityScale = resolveIntensityScale(
+    options.lightIntensityScale ?? "auto",
+    gathered.map(({ desc }) => desc),
+  );
+
+  for (const { prim, desc } of gathered) {
     if (desc.kind === "dome") {
       domes.push(desc);
       warnOnce(
@@ -136,7 +164,7 @@ export function bindLights(
     lights.push(light);
   }
 
-  return { lights, domes };
+  return { lights, domes, appliedIntensityScale: intensityScale };
 }
 
 /** UsdLux lights emit along their local −Z; Three.js directional/spot lights

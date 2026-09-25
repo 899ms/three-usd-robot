@@ -207,9 +207,23 @@ def Xform "Room"
         int[] faceVertexIndices = [0, 1, 2, 3]
         point3f[] points = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]
     }
+
+    def Xform "hidden_group"
+    {
+        token visibility = "invisible"
+
+        def Mesh "inherited_hidden"
+        {
+            int[] faceVertexCounts = [4]
+            int[] faceVertexIndices = [0, 1, 2, 3]
+            point3f[] points = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0)]
+        }
+    }
 }
 `;
     const robot = await new ThreeUsdRobotLoader().parse(OMNI_ROOM);
+    // `wall` renders despite its CollisionAPI; the guide proxy, the invisible
+    // mesh, and the mesh under an invisible parent all stay out.
     expect(meshes(robot).map((m) => m.name)).toEqual(["wall"]);
   });
 

@@ -387,18 +387,8 @@ async function load(url: string) {
     scene.add(next);
     next.showJointAxes = true;
     frame(next);
-
-    // Omniverse-style stages author photometric intensities (hundreds to tens
-    // of thousands — Isaac robots and the factory sample alike); scale them
-    // into this renderer's exposure-1 range. Unitless stages (intensities
-    // around 1) pass through. See docs/lighting.md on calibration.
-    const authored = Math.max(
-      0,
-      ...next.lights.map((light) => light.intensity),
-      ...next.domeLights.map((dome) => dome.intensity),
-    );
-    const lightScale = authored > 100 ? 0.001 : 1;
-    for (const light of next.lights) light.intensity *= lightScale;
+    // Intensity calibration is the loader's job now: `lightIntensityScale`
+    // defaults to "auto" (photometric Omniverse stages → ×0.001).
 
     // Stages that bring a lighting setup (a dome, or several lights) render
     // with it; a single stray light — Franka ships one SphereLight — keeps the
@@ -441,7 +431,6 @@ async function load(url: string) {
       setStatus(`${statusText} — fetching dome environment…`);
       await applyUsdEnvironment(next, scene, {
         background: true,
-        intensityScale: lightScale,
         onWarn: (m) => console.warn(`[three-usd-robot] ${m}`),
       });
       // The user may have switched assets while the HDRI streamed in.

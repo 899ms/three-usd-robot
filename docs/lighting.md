@@ -38,23 +38,29 @@ light prims) and `metersPerUnit` — because Three.js ignores ancestor scale for
 
 ## Intensity calibration
 
-The library applies the UsdLux formula verbatim: the Three.js intensity is
-`inputs:intensity × 2^inputs:exposure × lightIntensityScale` (default scale
-`1`). No hidden per-type constants — but the *units* differ by authoring app:
+The Three.js intensity is `inputs:intensity × 2^inputs:exposure ×
+lightIntensityScale` — the UsdLux formula with one multiplier and no hidden
+per-type constants. The *units* differ by authoring app, so the multiplier's
+default is **`"auto"`**, decided once per stage:
 
 - **Omniverse / Isaac Sim** authors photometric values — a ceiling `RectLight`
-  at 15 000, a `DomeLight` at 1 000. Rendered raw at exposure 1 these blow
-  out; pass **`lightIntensityScale: 0.001`** (or drive
-  `renderer.toneMappingExposure`) to land in a conventional Three.js range.
-  Isaac's Simple Room then yields a 5 m × 0.5 m `RectAreaLight` at
-  intensity 15.
+  at 15 000, a `DomeLight` at 1 000. When any light or dome exceeds `100`,
+  `"auto"` scales the whole stage by `0.001`: Isaac's Simple Room lands as a
+  5 m × 0.5 m `RectAreaLight` at intensity 15 with the dome environment at
+  1.0, out of the box.
 - **Unitless / DCC-neutral stages** (intensities around 1) pass through
-  unchanged with the default scale.
+  unchanged.
+- A number opts out of the heuristic: `lightIntensityScale: 1` keeps raw
+  photometric values (pair it with a real camera exposure — see
+  `applyRenderDefaults`), any other value multiplies verbatim.
 - The `DistantLight` schema fallback is 50 000 (lux-flavored daylight) when no
-  intensity is authored, per the USD spec.
+  intensity is authored, per the USD spec — note that it alone trips the
+  photometric detection.
 
-The authored value always remains on `userData.usdLight.intensity` for apps
-doing their own photometric mapping.
+The resolved multiplier is stored on `robot.lightIntensityScale` (and
+`applyUsdEnvironment` defaults to it), and the authored value always remains
+on `userData.usdLight.intensity` for apps doing their own photometric
+mapping.
 
 ## Shadows
 
@@ -89,7 +95,7 @@ like `/nodes`, is split off because it imports three's addons):
 ```ts
 import { applyUsdEnvironment } from "three-usd-robot/rendering";
 
-const robot = await new ThreeUsdRobotLoader({ lightIntensityScale: 0.001 }).loadAsync(url);
+const robot = await new ThreeUsdRobotLoader().loadAsync(url);
 scene.add(robot);
 await applyUsdEnvironment(robot, scene, { background: true });
 ```
